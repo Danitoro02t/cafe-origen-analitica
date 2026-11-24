@@ -2,10 +2,6 @@ const { performance } = require("node:perf_hooks");
 const { clientesRecurrentes } = require("./analitica");
 const { generarVentasNo } = require("./generador");
 
-// Uso:
-//   node src/tiempos.js            -> mide n = 1.000 ... 16.000 y estima 100.000 y 1.000.000
-//   node src/tiempos.js 100000     -> además ejecuta los tamaños indicados (solo si la estimación < 2 min)
-
 const tamanos = [1000, 2000, 4000, 8000, 16000];
 const extras = process.argv.slice(2).map(Number).filter((n) => Number.isInteger(n) && n > 0);
 const LIMITE_MS = 2 * 60 * 1000;
@@ -23,7 +19,6 @@ function medirTiempo(n) {
   return { n, ms, recurrentes: recurrentes.length };
 }
 
-// Calentamiento: la primera ejecución incluye la compilación JIT de V8.
 clientesRecurrentes(generarVentasNo(1000));
 
 console.log("Mediciones con console.time / console.timeEnd:");
@@ -38,7 +33,6 @@ const tabla = filas.map((fila, i) => ({
 }));
 console.table(tabla);
 
-// Estimación cuadrática: t(n) = t(16.000) * (n / 16.000)²
 const base = filas[filas.length - 1];
 const estimar = (n) => base.ms * (n / base.n) ** 2;
 const formatear = (ms) => (ms < 60000

@@ -94,6 +94,23 @@ function ventasPorCiudadM(ventas, ciudad) {
     .reduce((total, valor) => total + valor, 0);
 }
 
+function normalizarCiudad(ciudad) {
+  return ciudad.trim().toLowerCase();
+}
+
+function totalCiudadUnaPasada(ventas, ciudad) {
+  const ciudadBuscada = normalizarCiudad(ciudad);
+  let total = 0;
+
+  for (const venta of ventas) {
+    if (normalizarCiudad(venta.ciudad) === ciudadBuscada) {
+      total += valorVenta(venta);
+    }
+  }
+
+  return total;
+}
+
 function totalPorCiudad(ventas, contador) {
   const totales = {};
   const nombres = {};
@@ -150,8 +167,6 @@ function ventasDelDia(ventas, fecha) {
   return ventas.filter((venta) => venta.fecha === fecha);
 }
 
-// Versión original del compañero: compara cada venta con todas las siguientes.
-// O(n²) comparaciones de clientes, más el costo oculto de includes.
 function clientesRecurrentes(ventas) {
   const recurrentes = [];
   for (let i = 0; i < ventas.length; i++) {
@@ -175,6 +190,9 @@ module.exports = {
   ticketPromedio,
   ventasPorCiudad,
   ventasPorCiudadM,
+  normalizarCiudad,
+  totalCiudadUnaPasada,
+  totalCiudad: totalCiudadUnaPasada,
   totalPorCiudad,
   unidadesPorProducto,
   topProductosPorValor,

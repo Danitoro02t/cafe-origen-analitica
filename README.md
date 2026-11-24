@@ -50,6 +50,14 @@ node src/costoOculto.js       # cuenta comparaciones y el trabajo oculto de incl
 
 `tiempos.js` mide `clientesRecurrentes` con `console.time` / `console.timeEnd` y estima su tiempo para 100.000 y 1.000.000 de ventas. `costoOculto.js` compara datos típicos con un peor caso construido. La tabla de tiempos, las estimaciones y el diagnóstico están en [bitacora.md](./bitacora.md).
 
+## Comparar memoria: cadena de métodos frente a una pasada
+
+```sh
+node src/espacio.js
+```
+
+Compara `totalCiudadCadena` (map, filter, map y reduce) con `totalCiudadUnaPasada` (un solo `for...of`). Verifica que dan el mismo valor con 10.000 ventas, cuenta los recorridos y los arreglos intermedios, mide tiempos y ejecuta las dos con 1.000.000 de ventas bajo distintos límites de memoria. La clasificación espacial del motor y la decisión final están en [bitacora.md](./bitacora.md).
+
 ## Preguntas que responde
 
 - ¿Cuánto se vendió en total y cuál fue el ticket promedio?

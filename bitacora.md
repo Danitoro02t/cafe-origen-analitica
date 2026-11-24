@@ -357,3 +357,138 @@ El reporte de clientes recurrentes se vuelve lento porque, para saber si alguien
 Con pocas ventas no se nota, pero el trabajo no crece al mismo ritmo que el historial: **cada vez que el historial se duplica, el reporte tarda unas cuatro veces más**. En nuestras pruebas, 16.000 ventas tomaron 2 segundos; 100.000 ventas, más de 2 minutos; y un año con 1.000.000 de ventas tomaría entre 2 y 4 horas. Además, cuando hay clientes que compran muy seguido, el reporte repasa también su lista de clientes ya encontrados una y otra vez, lo que puede empeorarlo todavía más.
 
 El problema no es el computador ni la cantidad de datos en sí, sino la forma en que el reporte busca los repetidos. Si se cambia por un método que pase por cada venta una sola vez, llevando la cuenta de cada cliente, el tiempo crecería al mismo ritmo que las ventas y el reporte anual tardaría segundos en lugar de horas.
+
+## MiniReto 7: complejidad espacial y cadena de métodos frente a una sola pasada
+
+El líder técnico pregunta cuántas veces se recorre el arreglo y cuántos arreglos nuevos se crean en el reporte por ciudad, porque el marketplace correrá en un servidor con memoria limitada.
+
+### 1. Las dos versiones
+
+`totalCiudadCadena` (en `src/espacio.js`) encadena cuatro métodos:
+
+```js
+ventas
+  .map((venta) => ({ ...venta, ciudad: normalizarCiudad(venta.ciudad) }))
+  .filter((venta) => venta.ciudad === ciudadBuscada)
+  .map(valorVenta)
+  .reduce((total, valor) => total + valor, 0);
+```
+
+`totalCiudadUnaPasada` (en `src/analitica.js`) hace lo mismo con un solo `for...of` y un acumulador:
+
+```js
+let total = 0;
+for (const venta of ventas) {
+  if (normalizarCiudad(venta.ciudad) === ciudadBuscada) {
+    total += valorVenta(venta);
+  }
+}
+return total;
+```
+
+Las dos usan la misma función `normalizarCiudad` (`trim().toLowerCase()`), así que tratan igual las variantes como `medellín` o ` BOGOTÁ `.
+
+### 2. Comprobación con 10.000 ventas
+
+`node src/verificar.js` incluye la prueba `totalCiudadCadena / totalCiudadUnaPasada: mismo valor con 10.000 ventas`. Genera 10.000 ventas con `generarVentasNo` y compara con `===` el resultado de las dos versiones para `Medellín`, ` BOGOTÁ `, `cali`, `Pereira` y `Tunja` (una ciudad sin ventas, que debe dar 0 en las dos). La prueba pasa. También se comprueba que las dos devuelven 356.000 para Medellín con los datos del Día 1 y 0 con un arreglo vacío.
+
+En una ejecución de `node src/espacio.js`, las dos versiones dieron **494.437.000** para Medellín. Coinciden exactamente porque suman los mismos números enteros en el mismo orden.
+
+### 3. Recorridos y arreglos intermedios
+
+Sea `n` el número de ventas y `k` el número de ventas de la ciudad buscada (`k ≤ n`).
+
+| Paso de la cadena | Recorre | Crea | Tamaño de lo que crea |
+|---|---|---|---|
+| `map` (normalizar) | las `n` ventas | 1 arreglo y `n` objetos copiados con `...venta` | `n` |
+| `filter` | las `n` ventas normalizadas | 1 arreglo | `k` |
+| `map` (valor) | las `k` ventas filtradas | 1 arreglo | `k` |
+| `reduce` | los `k` valores | nada (un número) | 1 |
+| **Total** | **4 recorridos**, `2n + 2k` elementos visitados | **3 arreglos nuevos** y `n` objetos | `n + 2k` elementos |
+
+| Versión | Recorridos | Elementos visitados | Arreglos nuevos | Memoria adicional |
+|---|---:|---:|---:|---|
+| `totalCiudadCadena` | 4 (2 sobre `n` y 2 sobre `k`) | `2n + 2k` (peor caso, `k = n`: `4n`) | 3 | `n + 2k` elementos y `n` objetos copiados |
+| `totalCiudadUnaPasada` | 1 | `n` | 0 | dos variables (`ciudadBuscada`, `total`) |
+
+Medición real con 10.000 ventas (`node src/espacio.js`): la cadena visitó 25.030 elementos y guardó 15.030 elementos en 3 arreglos nuevos (10.000 normalizadas + 2.515 de Medellín + 2.515 valores), además de copiar 10.000 objetos. La versión de una pasada visitó 10.000 elementos y no creó ningún arreglo.
+
+**En notación Big O:**
+
+| Versión | Tiempo | Espacio adicional |
+|---|---|---|
+| `totalCiudadCadena` | O(4n) → **O(n)** | O(n + 2k) → **O(n)** |
+| `totalCiudadUnaPasada` | O(n) → **O(n)** | **O(1)** |
+
+En la versión de una pasada, `normalizarCiudad` crea textos temporales en cada vuelta, pero cada uno es del tamaño de un nombre de ciudad (acotado) y deja de usarse en la vuelta siguiente, así que en cada momento solo hay una cantidad constante viva: O(1).
+
+### 4. ¿Por qué las dos son O(n) en tiempo si una recorre cuatro veces?
+
+Big O describe **cómo crece** el trabajo cuando crece `n`, no cuántas operaciones exactas hace. Por eso se aplican dos reglas de simplificación:
+
+1. **Se eliminan las constantes multiplicativas:** `O(4n) = O(n)`. Si `n` se duplica, `4n` también se duplica (de `4n` a `8n`), igual que `n`. El 4 cambia la escala, no la forma del crecimiento.
+2. **Se conserva solo el término dominante:** `2n + 2k` con `k ≤ n` está acotado por `4n`, que de nuevo es `O(n)`. Si hubiera un `n + 5`, el 5 tampoco cuenta.
+
+Las dos versiones son lineales: doblar las ventas dobla su tiempo. Ninguna se vuelve cuadrática como `clientesRecurrentes`. La constante sí importa en la práctica (la cadena fue más lenta en todas las mediciones), pero no cambia la clase de complejidad:
+
+| n | cadena | una pasada |
+|---:|---:|---:|
+| 10.000 | 5,4 ms | 0,5 ms |
+| 100.000 | 14,0 ms | 8,1 ms |
+| 1.000.000 | 230,5 ms | 135,0 ms |
+
+Entre 100.000 y 1.000.000 (×10 en `n`), las dos versiones crecieron casi lo mismo: ×16,5 la cadena y ×16,7 la de una pasada. Crecen algo más que ×10 porque con un millón de ventas los datos ya no caben en la memoria rápida del procesador, igual que se vio en el MiniReto 6, y con 10.000 ventas los tiempos de menos de un milisegundo son poco confiables. Lo importante es que las dos crecen al mismo ritmo, así que pertenecen a la misma clase, O(n). La cadena tarda alrededor de 1,7 veces más (230,5 / 135,0), sobre todo por crear y luego liberar un millón de objetos.
+
+**En espacio, en cambio, sí hay una diferencia de clase:** O(n) frente a O(1). Eso se nota con memoria limitada. `node src/espacio.js` ejecuta cada versión con 1.000.000 de ventas en un proceso aparte con límite de memoria (`--max-old-space-size`). Las ventas por sí solas ocupan unos 113 MB:
+
+| Límite de memoria | `totalCiudadCadena` | `totalCiudadUnaPasada` |
+|---:|---|---|
+| 130 MB | sin memoria | termina |
+| 160 MB | sin memoria | termina |
+| 200 MB | sin memoria | termina |
+| 250 MB | termina | termina |
+
+En pruebas sueltas, la cadena necesitó entre 220 y 230 MB, es decir, unos **110 MB más que los datos**, para guardar a la vez el millón de copias, las ventas filtradas y sus valores. La versión de una pasada terminó con solo 130 MB, prácticamente lo que ocupan los datos.
+
+### 5. Clasificación espacial del motor
+
+Se cuenta la **memoria adicional**, sin incluir el arreglo de entrada `ventas`. Se usan `n` = ventas, `c` = ciudades distintas, `p` = productos distintos, `k` = tamaño del ranking o del filtro y `r` = clientes recurrentes.
+
+| Función | Espacio adicional | Por qué |
+|---|---|---|
+| `valorVenta` | **O(1)** | Una multiplicación. |
+| `totalVendido` | **O(1)** | Un acumulador numérico. |
+| `totalVendidoM` | **O(1)** | `reduce` con acumulador numérico; no crea arreglos. |
+| `unidadesVendidas` | **O(1)** | Un acumulador. |
+| `unidadesVendidasM` | **O(1)** | `reduce` con acumulador numérico. |
+| `ventaMayor` | **O(1)** | Guarda una referencia a la venta mayor, no una copia. |
+| `ticketPromedio` | **O(1)** | Dos acumuladores. |
+| `ventasPorCiudad` | **O(1)** | Un acumulador y textos temporales de tamaño acotado. |
+| `ventasPorCiudadM` | **O(n)** | `filter` crea un arreglo de `k` ventas y `map` otro de `k` valores: O(2k), que en el peor caso es O(n). |
+| `normalizarCiudad` | **O(1)** | Un texto del tamaño de un nombre de ciudad. |
+| `totalCiudadUnaPasada` (`totalCiudad`) | **O(1)** | Un solo ciclo con acumulador. |
+| `totalCiudadCadena` | **O(n)** | 3 arreglos intermedios y `n` objetos copiados. |
+| `totalPorCiudad` | **O(c)**, peor caso **O(n)** | Crea `totales`, `nombres`, `resultado` y el arreglo de `Object.entries`, cada uno con una entrada por ciudad: O(4c) = O(c). Con el catálogo actual (4 ciudades), `c` no crece con las ventas y en la práctica es O(1). Pero si cada venta trajera una ciudad mal escrita distinta, `c` llegaría a `n`: el peor caso es O(n). |
+| `unidadesPorProducto` | **O(p)**, peor caso **O(n)** | Un diccionario con una entrada por producto. Con 5 productos es constante en la práctica; si cada venta fuera un producto distinto, O(n). |
+| `topProductosPorValor` | **O(p)**, peor caso **O(n)** | Es la que más memoria intermedia crea: el diccionario (`p`), el arreglo de `Object.entries` (`p`), la copia con `[...]` (`p`), la memoria temporal del `sort` (hasta `p`), `slice` (`k`) y `map` (`k`). Unos `4p + 2k` elementos → O(p + k) = O(p), porque `k ≤ p`. La copia `[...]` es innecesaria: `Object.entries` ya devuelve un arreglo nuevo, así que el `sort` no toca nada original. Quitarla ahorraría `p` elementos, aunque la clase siga siendo O(p). |
+| `ventasDelDia` | **O(n)** | `filter` devuelve un arreglo nuevo con las ventas de la fecha; si todas son del mismo día, tiene `n` elementos. Aquí el arreglo es el resultado que se pide, no un intermedio desperdiciado. |
+| `clientesRecurrentes` | **O(r)**, peor caso **O(n)** | El arreglo `recurrentes` guarda cada cliente repetido una vez; como mínimo cada uno aparece dos veces, `r ≤ n/2` → O(n). |
+
+**Resumen:** usan memoria adicional constante, **O(1)**, `valorVenta`, `totalVendido`, `totalVendidoM`, `unidadesVendidas`, `unidadesVendidasM`, `ventaMayor`, `ticketPromedio`, `ventasPorCiudad`, `normalizarCiudad` y `totalCiudadUnaPasada`. Usan memoria proporcional a los datos, **O(n)**, `ventasPorCiudadM`, `totalCiudadCadena`, `ventasDelDia` y `clientesRecurrentes`. `totalPorCiudad`, `unidadesPorProducto` y `topProductosPorValor` dependen del número de grupos (O(c) u O(p)): son constantes mientras el catálogo de ciudades y productos esté limpio y acotado, pero en el peor caso, con datos sucios donde cada venta forma su propio grupo, son O(n).
+
+También hay que notar que `reduce` no es O(n) en espacio por sí mismo: `totalVendidoM` y `unidadesVendidasM` son O(1) porque su acumulador es un número. `reduce` crece en memoria solo cuando el acumulador es un objeto que gana una entrada por grupo, como en `unidadesPorProducto`.
+
+### 6. Decisión: qué versión de `totalCiudad` queda en el motor
+
+**Queda `totalCiudadUnaPasada`**, exportada también como `totalCiudad` en `src/analitica.js`. `totalCiudadCadena` se mueve a `src/espacio.js`, solo como referencia para la comparación y las pruebas.
+
+**Recursos:**
+- Las dos son O(n) en tiempo, pero la de una pasada hace 1 recorrido en lugar de 4 y fue más rápida en todas las mediciones (135 ms frente a 230 ms con un millón de ventas).
+- En espacio, la de una pasada es O(1) y la cadena O(n). Con un millón de ventas, la cadena necesitó unos 110 MB extra y se quedó sin memoria con límites de 130 a 200 MB, mientras que la de una pasada terminó con 130 MB. En un servidor con memoria limitada, donde además varias peticiones pueden correr al mismo tiempo, ese consumo extra es justo lo que se quiere evitar. Y como esta memoria crece con el historial, el problema empeora con el tiempo.
+
+**Legibilidad:**
+- La cadena se lee como una frase ("normaliza, filtra, convierte en valor, suma") y cada paso hace una sola cosa. Es su gran ventaja.
+- Pero la versión de una pasada también es corta y clara: son 6 líneas con el mismo patrón de acumulador que ya usan `totalVendido`, `unidadesVendidas` y `ventasPorCiudad`, así que es consistente con el resto del motor. Extraer `normalizarCiudad` en una función con nombre le devuelve parte de la claridad de la cadena: la condición del `if` se lee casi como texto.
+- La pérdida de legibilidad es pequeña y el ahorro de memoria es grande y crece con los datos, así que en este caso pesan más los recursos.
+
+La cadena de métodos sigue siendo una buena opción cuando los datos son pocos y acotados, o cuando los arreglos intermedios son el resultado que se necesita (como en `ventasDelDia`). Para totales sobre historiales que crecen, en un servidor con memoria limitada, el motor usa el recorrido único. Por la misma razón, `ventasPorCiudadM` (filter + map + reduce, O(n) en espacio) es candidata a reemplazarse por `totalCiudad` en la v0.2.

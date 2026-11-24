@@ -1,7 +1,5 @@
 const { generarVentasNo } = require("./generador");
 
-// Copia instrumentada de clientesRecurrentes: cuenta por separado las comparaciones
-// de clientes del doble ciclo y los elementos que recorre recurrentes.includes.
 function clientesRecurrentesContado(ventas) {
   const recurrentes = [];
   const conteo = { comparaciones: 0, llamadasIncludes: 0, visitasIncludes: 0 };
@@ -11,7 +9,6 @@ function clientesRecurrentesContado(ventas) {
       conteo.comparaciones += 1;
       if (ventas[i].cliente === ventas[j].cliente) {
         conteo.llamadasIncludes += 1;
-        // includes recorre hasta encontrar el elemento o llegar al final.
         const posicion = recurrentes.indexOf(ventas[i].cliente);
         conteo.visitasIncludes += posicion === -1 ? recurrentes.length : posicion + 1;
         if (posicion === -1) {
@@ -24,10 +21,6 @@ function clientesRecurrentesContado(ventas) {
   return { recurrentes, conteo };
 }
 
-// Peor caso para includes: la primera mitad son n/4 clientes que compran dos veces
-// (llenan recurrentes), la segunda mitad es un solo cliente que compra n/2 veces.
-// Ese cliente queda al final de recurrentes, y cada una de sus ~n²/8 coincidencias
-// obliga a includes a recorrer ~n/4 elementos antes de encontrarlo.
 function generarPeorCaso(n) {
   const ventas = [];
   for (let i = 0; i < n / 2; i++) {

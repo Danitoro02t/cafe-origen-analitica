@@ -14,8 +14,10 @@ const {
   topProductosPorValor,
   ticketPromedio,
   ventasDelDia,
-  clientesRecurrentes
+  clientesRecurrentes,
+  totalCiudadUnaPasada
 } = require("./analitica");
+const { totalCiudadCadena } = require("./espacio");
 
 const ventasOriginales = [...ventas];
 let huboDiferencias = false;
@@ -159,6 +161,22 @@ mostrarResultado(
   isDeepStrictEqual(clientesRecurrentes([]), []) &&
     isDeepStrictEqual(clientesRecurrentes([ventas[0]]), []) &&
     isDeepStrictEqual(clientesRecurrentes(ventas.slice(0, 3)), [])
+);
+
+const ventasDiezMil = generarVentasNo(10000);
+mostrarResultado(
+  "totalCiudadCadena / totalCiudadUnaPasada: mismo valor con 10.000 ventas",
+  ["Medellín", " BOGOTÁ ", "cali", "Pereira", "Tunja"].every((ciudad) =>
+    totalCiudadCadena(ventasDiezMil, ciudad) === totalCiudadUnaPasada(ventasDiezMil, ciudad)
+  )
+);
+
+mostrarResultado(
+  "totalCiudadUnaPasada: Medellín 356.000 con datos del Día 1 y 0 con arreglo vacío",
+  totalCiudadUnaPasada(ventas, " Medellín ") === 356000 &&
+    totalCiudadCadena(ventas, " Medellín ") === 356000 &&
+    totalCiudadUnaPasada([], "Medellín") === 0 &&
+    totalCiudadCadena([], "Medellín") === 0
 );
 
 mostrarResultado(
