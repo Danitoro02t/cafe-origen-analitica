@@ -13,7 +13,8 @@ const {
   unidadesPorProducto,
   topProductosPorValor,
   ticketPromedio,
-  ventasDelDia
+  ventasDelDia,
+  clientesRecurrentes
 } = require("./analitica");
 
 const ventasOriginales = [...ventas];
@@ -146,6 +147,18 @@ const topEsperado = [
 mostrarResultado(
   "topProductosPorValor: tres primeros",
   isDeepStrictEqual(topProductosPorValor(ventas, 3), topEsperado)
+);
+
+mostrarResultado(
+  "clientesRecurrentes: C01, C02 y C03 con los datos del Día 1",
+  isDeepStrictEqual(clientesRecurrentes(ventas), ["C01", "C02", "C03"])
+);
+
+mostrarResultado(
+  "clientesRecurrentes: vacío, un registro y sin repetidos devuelven []",
+  isDeepStrictEqual(clientesRecurrentes([]), []) &&
+    isDeepStrictEqual(clientesRecurrentes([ventas[0]]), []) &&
+    isDeepStrictEqual(clientesRecurrentes(ventas.slice(0, 3)), [])
 );
 
 mostrarResultado(

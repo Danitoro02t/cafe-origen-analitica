@@ -40,6 +40,16 @@ node src/medir.js
 
 El script genera historiales de 100, 1.000, 10.000 y 100.000 ventas y muestra en una tabla las operaciones contadas para cada función. Las predicciones, los resultados y su análisis Big O están en [bitacora.md](./bitacora.md).
 
+## Medir tiempos de clientes recurrentes
+
+```sh
+node src/tiempos.js           # n = 1.000, 2.000, 4.000, 8.000 y 16.000, y estimaciones
+node src/tiempos.js 100000    # además ejecuta 100.000 si la estimación es menor a 2 minutos
+node src/costoOculto.js       # cuenta comparaciones y el trabajo oculto de includes
+```
+
+`tiempos.js` mide `clientesRecurrentes` con `console.time` / `console.timeEnd` y estima su tiempo para 100.000 y 1.000.000 de ventas. `costoOculto.js` compara datos típicos con un peor caso construido. La tabla de tiempos, las estimaciones y el diagnóstico están en [bitacora.md](./bitacora.md).
+
 ## Preguntas que responde
 
 - ¿Cuánto se vendió en total y cuál fue el ticket promedio?

@@ -150,6 +150,21 @@ function ventasDelDia(ventas, fecha) {
   return ventas.filter((venta) => venta.fecha === fecha);
 }
 
+// Versión original del compañero: compara cada venta con todas las siguientes.
+// O(n²) comparaciones de clientes, más el costo oculto de includes.
+function clientesRecurrentes(ventas) {
+  const recurrentes = [];
+  for (let i = 0; i < ventas.length; i++) {
+    for (let j = i + 1; j < ventas.length; j++) {
+      if (ventas[i].cliente === ventas[j].cliente &&
+        !recurrentes.includes(ventas[i].cliente)) {
+        recurrentes.push(ventas[i].cliente);
+      }
+    }
+  }
+  return recurrentes;
+}
+
 module.exports = {
   valorVenta,
   totalVendido,
@@ -163,5 +178,6 @@ module.exports = {
   totalPorCiudad,
   unidadesPorProducto,
   topProductosPorValor,
-  ventasDelDia
+  ventasDelDia,
+  clientesRecurrentes
 };

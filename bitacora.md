@@ -258,3 +258,102 @@ Se generaron datos independientes para cada tamaño con las listas fijas de prod
 | 100.000 | 100.000 | 200.000 | 200.004 | 1 |
 
 La predicción coincide con los resultados: `totalVendido` y `ventaMayor` crecen exactamente 10 veces por cada salto de tamaño; `totalPorCiudad` pasa de 204 a 2.004, de 2.004 a 20.004 y de 20.004 a 200.004, cerca de 10 veces debido a las cuatro visitas finales por ciudad; `primeraVenta` permanece en 1. En otras ejecuciones, la selección aleatoria podría no incluir alguna ciudad en los 100 registros y reducir el conteo final hasta en cuatro operaciones; el término dominante sigue siendo 2n. Por tanto, las tres funciones de recorrido y agrupación son O(n), y `primeraVenta` es O(1). El conteo de `totalPorCiudad` no es O(n²): no compara cada venta con todas las demás, sino que consulta las claves de un objeto al recorrer cada venta.
+
+## MiniReto 6: clientes recurrentes y crecimiento cuadrático
+
+Un compañero agregó `clientesRecurrentes` (en `src/analitica.js`) para listar los clientes que compraron más de una vez. Con los datos de prueba funcionó, pero con el historial anual el reporte "se quedó pensando varios minutos".
+
+### 1. Verificación con los 12 datos del Día 1
+
+`node src/verificar.js` incluye la prueba `clientesRecurrentes: C01, C02 y C03 con los datos del Día 1`, que pasa: la función devuelve `["C01", "C02", "C03"]`. C01 compró en los registros 1, 4 y 11; C02, en el 2 y el 7; C03, en el 3 y el 9. Los demás clientes (C04 a C08) compraron una sola vez. También se comprobó que un arreglo vacío, uno de un solo registro y uno sin clientes repetidos devuelven `[]`.
+
+### 2. Traza con 5 ventas
+
+Se usan los cinco primeros registros del Día 1: `C01, C02, C03, C01, C04` (posiciones 0 a 4).
+
+| i | cliente[i] | j recorridos | comparaciones | ¿coincide? | `includes` | recurrentes |
+|---:|---|---|---:|---|---|---|
+| 0 | C01 | 1, 2, 3, 4 | 4 | Sí con j=3 (C01) | `[].includes("C01")` → `false`, se agrega | `[C01]` |
+| 1 | C02 | 2, 3, 4 | 3 | No | no se llama | `[C01]` |
+| 2 | C03 | 3, 4 | 2 | No | no se llama | `[C01]` |
+| 3 | C01 | 4 | 1 | No (C04) | no se llama | `[C01]` |
+| 4 | C04 | ninguno | 0 | - | - | `[C01]` |
+| **Total** | | | **10** | | 1 llamada | `[C01]` |
+
+Con 5 ventas hace `4 + 3 + 2 + 1 + 0 = 10` comparaciones de clientes.
+
+**Generalización:** con `n` ventas, la venta `i` se compara con las `n − 1 − i` ventas que vienen después. En total:
+
+`(n − 1) + (n − 2) + … + 1 + 0 = n(n − 1) / 2`
+
+Para n = 5 da `5·4/2 = 10`. Como `n(n − 1)/2 = n²/2 − n/2`, el término dominante es `n²`: la función es **O(n²)**. Este número no depende de los datos: aunque ningún cliente se repita, el doble ciclo hace siempre todas las comparaciones (no hay ningún `break`).
+
+### 3. Tabla de tiempos
+
+`node src/tiempos.js 100000` genera datos nuevos con `generarVentasNo` (MiniReto 5) para cada tamaño y mide con `console.time` / `console.timeEnd`. Antes de medir hace una ejecución de calentamiento para que la compilación JIT de V8 no caiga en la primera medición. Resultados de una ejecución (Node.js v24.19.0, Windows 11):
+
+| n | comparaciones n(n−1)/2 | tiempo | factor vs. fila anterior | clientes recurrentes |
+|---:|---:|---:|---:|---:|
+| 1.000 | 499.500 | 9,2 ms | - | 270 |
+| 2.000 | 1.999.000 | 27,9 ms | 3,03 | 532 |
+| 4.000 | 7.998.000 | 123,9 ms | 4,45 | 1.078 |
+| 8.000 | 31.996.000 | 567,5 ms | 4,58 | 2.143 |
+| 16.000 | 127.992.000 | 2.164,6 ms (2,2 s) | 3,81 | 4.224 |
+| 100.000 (ejecutado) | 4.999.950.000 | 131.788 ms (2 min 11,8 s) | - | - |
+
+En una ejecución anterior se obtuvieron 12,9 / 29,6 / 139,9 / 595,4 / 2.217,5 ms (factores 2,30 / 4,72 / 4,26 / 3,72): los valores exactos varían, pero el patrón es el mismo.
+
+### 4. Análisis: ¿qué pasa al duplicar n?
+
+Cada vez que `n` se duplica, el tiempo se multiplica **aproximadamente por 4** (3,03; 4,45; 4,58; 3,81; el promedio de los tres últimos saltos es 4,3). Es justo lo que predice O(n²):
+
+`t(2n) / t(n) ≈ (2n)² / n² = 4`
+
+La columna de comparaciones confirma la causa: al duplicar `n` las comparaciones se multiplican casi exactamente por 4 (499.500 → 1.999.000 → 7.998.000 …). El primer salto (1.000 → 2.000) se aleja más de 4 porque con tiempos de pocos milisegundos pesan el ruido del sistema y la optimización del motor; desde 4.000 ventas el factor ya se estabiliza alrededor de 4. Una función O(n), como `totalVendido`, solo duplicaría su tiempo.
+
+### 5. Estimaciones para 100.000 y 1.000.000 de ventas
+
+Se usa la medición más grande (n = 16.000, 2.164,6 ms) y la regla cuadrática `t(n) ≈ t(16.000) · (n / 16.000)²`:
+
+- **100.000 ventas:** `(100.000 / 16.000)² = 6,25² = 39,06` → `2.164,6 ms × 39,06 ≈ 84.554 ms ≈ 1,4 min`. Como es menor a dos minutos, se ejecutó.
+- **1.000.000 de ventas:** `(1.000.000 / 16.000)² = 62,5² = 3.906,25` → `2.164,6 ms × 3.906,25 ≈ 8.455.469 ms ≈ 2 h 21 min`. **No se ejecutó.**
+
+**Resultado real con 100.000:** 131.788 ms (2 min 11,8 s), es decir, un 56 % más que lo estimado. La forma cuadrática se mantiene, pero la constante empeora con datos grandes. La explicación más probable es la memoria: con 16.000 ventas los datos caben en la memoria rápida del procesador (caché) y con 100.000 ya no, así que cada comparación tarda un poco más. A eso se suma que `includes` recorre un arreglo de recurrentes cada vez más largo (punto 6).
+
+**Estimación corregida para 1.000.000**, calculada a partir de la medición real de 100.000: `131.788 ms × (1.000.000 / 100.000)² = 131.788 ms × 100 ≈ 13.178.800 ms ≈ 3 h 40 min`. Con las dos mediciones, el reporte anual de un millón de ventas tardaría **entre 2,3 y 3,7 horas**; la cifra basada en 100.000 es la más confiable porque se mide más cerca del tamaño objetivo.
+
+### 6. Costo oculto: `recurrentes.includes`
+
+`includes` no es gratis: recorre `recurrentes` elemento por elemento hasta encontrar el cliente o llegar al final, así que cuesta O(r), donde `r` es el número de clientes recurrentes ya encontrados. Por el `&&`, solo se llama cuando los dos clientes coinciden, pero se llama **en cada coincidencia**, también cuando el cliente ya estaba en la lista.
+
+`node src/costoOculto.js` usa una copia instrumentada de la función que cuenta por separado las comparaciones del doble ciclo y los elementos que recorre `includes`:
+
+**Datos del generador (~n/3 clientes):**
+
+| n | comparaciones | llamadas a `includes` | elementos recorridos por `includes` |
+|---:|---:|---:|---:|
+| 500 | 124.750 | 774 | 44.168 |
+| 1.000 | 499.500 | 1.457 | 160.404 |
+| 2.000 | 1.999.000 | 3.084 | 644.664 |
+| 4.000 | 7.998.000 | 5.930 | 2.827.338 |
+
+Con datos típicos, `includes` añade unas 0,35 visitas por cada comparación y también crece ×4: el costo total sigue siendo O(n²), pero alrededor de un 35 % más caro de lo que sugiere el doble ciclo solo.
+
+**Peor caso construido:** la primera mitad son `n/4` clientes que compran dos veces (llenan `recurrentes`) y la segunda mitad es un único cliente que compra `n/2` veces. Ese cliente queda al final de la lista, y cada una de sus ≈ `(n/2)²/2 = n²/8` coincidencias obliga a `includes` a recorrer ≈ `n/4` elementos:
+
+| n | comparaciones | llamadas a `includes` | elementos recorridos por `includes` |
+|---:|---:|---:|---:|
+| 500 | 124.750 | 31.250 | 3.929.499 |
+| 1.000 | 499.500 | 125.000 | 31.343.374 |
+| 2.000 | 1.999.000 | 500.000 | 250.374.249 |
+| 4.000 | 7.998.000 | 2.000.000 | 2.001.498.499 |
+
+Al duplicar `n`, las visitas de `includes` se multiplican por **8** (≈ `2³`): `n²/8 coincidencias × n/4 elementos ≈ n³/32`. Con 4.000 ventas, `includes` ya hace 250 veces más trabajo que el doble ciclo. Por tanto, **en el peor caso la función es O(n³)**, no O(n²): el doble ciclo pone el piso cuadrático y `includes`, dentro de él, añade un tercer recorrido. Basta con que un cliente muy frecuente (por ejemplo, una cafetería que compra todos los días) aparezca después de muchos clientes recurrentes para acercarse a este caso.
+
+### 7. Conclusión para la gerente
+
+El reporte de clientes recurrentes se vuelve lento porque, para saber si alguien compró más de una vez, revisa cada venta contra todas las demás del historial, una por una. Es como si, para encontrar clientes repetidos en una pila de facturas, alguien tomara la primera factura y la comparara con todas las otras, luego la segunda con todas las otras, y así hasta el final.
+
+Con pocas ventas no se nota, pero el trabajo no crece al mismo ritmo que el historial: **cada vez que el historial se duplica, el reporte tarda unas cuatro veces más**. En nuestras pruebas, 16.000 ventas tomaron 2 segundos; 100.000 ventas, más de 2 minutos; y un año con 1.000.000 de ventas tomaría entre 2 y 4 horas. Además, cuando hay clientes que compran muy seguido, el reporte repasa también su lista de clientes ya encontrados una y otra vez, lo que puede empeorarlo todavía más.
+
+El problema no es el computador ni la cantidad de datos en sí, sino la forma en que el reporte busca los repetidos. Si se cambia por un método que pase por cada venta una sola vez, llevando la cuenta de cada cliente, el tiempo crecería al mismo ritmo que las ventas y el reporte anual tardaría segundos en lugar de horas.
