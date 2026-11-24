@@ -12,6 +12,10 @@ function totalVendido(ventas) {
   return total;
 }
 
+function totalVendidoM(ventas) {
+  return ventas.reduce((total, venta) => total + valorVenta(venta), 0);
+}
+
 function unidadesVendidas(ventas) {
   let unidades = 0;
 
@@ -20,6 +24,10 @@ function unidadesVendidas(ventas) {
   }
 
   return unidades;
+}
+
+function unidadesVendidasM(ventas) {
+  return ventas.reduce((unidades, venta) => unidades + venta.cantidad, 0);
 }
 
 function ventaMayor(ventas) {
@@ -71,11 +79,65 @@ function ventasPorCiudad(ventas, ciudad) {
   return total;
 }
 
+function ventasPorCiudadM(ventas, ciudad) {
+  const ciudadBuscada = ciudad.trim().toLowerCase();
+
+  return ventas
+    .filter((venta) => venta.ciudad.trim().toLowerCase() === ciudadBuscada)
+    .map(valorVenta)
+    .reduce((total, valor) => total + valor, 0);
+}
+
+function totalPorCiudad(ventas) {
+  const acumulado = ventas.reduce((resultado, venta) => {
+    const ciudad = venta.ciudad.trim();
+    const clave = ciudad.toLowerCase();
+
+    if (!Object.hasOwn(resultado.totales, clave)) {
+      resultado.totales[clave] = 0;
+      resultado.nombres[clave] = ciudad;
+    }
+
+    resultado.totales[clave] += valorVenta(venta);
+    return resultado;
+  }, { totales: {}, nombres: {} });
+
+  return Object.entries(acumulado.totales).reduce((resultado, [clave, total]) => {
+    resultado[acumulado.nombres[clave]] = total;
+    return resultado;
+  }, {});
+}
+
+function unidadesPorProducto(ventas) {
+  return ventas.reduce((unidades, venta) => {
+    unidades[venta.producto] = (unidades[venta.producto] ?? 0) + venta.cantidad;
+    return unidades;
+  }, {});
+}
+
+function topProductosPorValor(ventas, k) {
+  const valoresPorProducto = ventas.reduce((valores, venta) => {
+    valores[venta.producto] = (valores[venta.producto] ?? 0) + valorVenta(venta);
+    return valores;
+  }, {});
+
+  return [...Object.entries(valoresPorProducto)]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, k)
+    .map(([producto, valorGenerado]) => ({ producto, valorGenerado }));
+}
+
 module.exports = {
   valorVenta,
   totalVendido,
+  totalVendidoM,
   unidadesVendidas,
+  unidadesVendidasM,
   ventaMayor,
   ticketPromedio,
-  ventasPorCiudad
+  ventasPorCiudad,
+  ventasPorCiudadM,
+  totalPorCiudad,
+  unidadesPorProducto,
+  topProductosPorValor
 };

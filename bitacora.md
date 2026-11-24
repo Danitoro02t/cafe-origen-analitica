@@ -157,3 +157,53 @@ Resultado manual: el ticket promedio es aproximadamente `89.545,45`.
 - `ventaMayor([])`: `null`.
 - `ticketPromedio([])`: `0`.
 - `ventasPorCiudad([], "Medellín")`: `0`.
+
+## Métodos de arreglo, agrupaciones y ranking
+
+### totalVendidoM
+
+- ¿Qué recorro?: cada venta con `reduce`.
+- ¿Qué filtro?: nada; todas las ventas cuentan.
+- ¿Qué transformo?: cada venta en su valor mediante `valorVenta`.
+- ¿Qué acumulo?: los valores de venta.
+- ¿Cómo agrupo?: en un único total, inicializado en `0`.
+
+### unidadesVendidasM
+
+- ¿Qué recorro?: cada venta con `reduce`.
+- ¿Qué filtro?: nada; se incluyen también las ventas con cero unidades.
+- ¿Qué transformo?: cada venta en su cantidad.
+- ¿Qué acumulo?: las unidades.
+- ¿Cómo agrupo?: en un único total, inicializado en `0`.
+
+### ventasPorCiudadM
+
+- ¿Qué recorro?: cada venta.
+- ¿Qué filtro?: las ventas cuya ciudad coincide con la ciudad buscada después de quitar espacios y normalizar mayúsculas.
+- ¿Qué transformo?: las ventas coincidentes en su valor con `map` y el texto de las ciudades para compararlo.
+- ¿Qué acumulo?: los valores de las ventas filtradas.
+- ¿Cómo agrupo?: en el total de una ciudad indicada; `reduce` empieza en `0`.
+
+### totalPorCiudad
+
+- ¿Qué recorro?: cada venta con `reduce`.
+- ¿Qué filtro?: nada; todas las ventas cuentan.
+- ¿Qué transformo?: el nombre de ciudad se recorta y se normaliza para reconocer variantes del mismo nombre; cada venta se convierte en su valor.
+- ¿Qué acumulo?: el valor vendido por ciudad.
+- ¿Cómo agrupo?: en diccionarios por nombre normalizado y luego en un objeto con el nombre presentado en los datos.
+
+### unidadesPorProducto
+
+- ¿Qué recorro?: cada venta con `reduce`.
+- ¿Qué filtro?: nada; todas las ventas cuentan.
+- ¿Qué transformo?: cada registro en el par producto-cantidad.
+- ¿Qué acumulo?: las cantidades de cada producto.
+- ¿Cómo agrupo?: en un objeto diccionario cuya clave es el producto.
+
+### topProductosPorValor
+
+- ¿Qué recorro?: cada venta para sumar su valor por producto.
+- ¿Qué filtro?: no se filtran ventas; después se limita el ranking a los primeros `k`.
+- ¿Qué transformo?: los totales del diccionario en entradas producto-valor y luego en objetos con producto y valor generado.
+- ¿Qué acumulo?: el dinero generado por las ventas de cada producto.
+- ¿Cómo agrupo?: en un objeto diccionario por producto; sus entradas se ordenan de mayor a menor antes de tomar `k`, sin ordenar el arreglo original.
