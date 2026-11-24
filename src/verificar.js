@@ -1,10 +1,12 @@
 const { isDeepStrictEqual } = require("node:util");
 const ventas = require("./datos");
+const { generarVentasNo } = require("./generador");
 const {
   totalVendido,
   totalVendidoM,
   unidadesVendidas,
   unidadesVendidasM,
+  ventaMayor,
   ventasPorCiudad,
   ventasPorCiudadM,
   totalPorCiudad,
@@ -28,6 +30,44 @@ function mostrarResultado(nombre, resultado) {
 mostrarResultado(
   "totalVendido / totalVendidoM",
   isDeepStrictEqual(totalVendido(ventas), totalVendidoM(ventas))
+);
+
+const ventasGeneradas = generarVentasNo(300);
+const productosYPrecios = new Map([
+  ["Origen Huila 500 g", 42000],
+  ["Origen Nariño 250 g", 26000],
+  ["Prensa francesa", 95000],
+  ["Origen Sierra 500 g", 45000],
+  ["Molino manual", 120000]
+]);
+const ciudadesValidas = new Set(["Medellín", "Bogotá", "Cali", "Pereira"]);
+mostrarResultado(
+  "generarVentasNo: cantidad, estructura y valores válidos",
+  ventasGeneradas.length === 300 &&
+    ventasGeneradas.every((venta, indice) =>
+      venta.id === indice + 1 &&
+      venta.fecha.startsWith("2026-09-") &&
+      /^C\d{2,}$/.test(venta.cliente) &&
+      Number(venta.cliente.slice(1)) <= 100 &&
+      productosYPrecios.get(venta.producto) === venta.precio &&
+      ciudadesValidas.has(venta.ciudad) &&
+      Number.isInteger(venta.cantidad) &&
+      venta.cantidad >= 1 &&
+      venta.cantidad <= 5
+    )
+);
+
+const contadorTotal = { operaciones: 0 };
+totalVendido(ventas, contadorTotal);
+const contadorMayor = { operaciones: 0 };
+ventaMayor(ventas, contadorMayor);
+const contadorCiudades = { operaciones: 0 };
+totalPorCiudad(ventas, contadorCiudades);
+mostrarResultado(
+  "contadores: visitas, comparaciones y agrupaciones",
+  contadorTotal.operaciones === ventas.length &&
+    contadorMayor.operaciones === 2 * ventas.length &&
+    contadorCiudades.operaciones === 2 * ventas.length + 4
 );
 mostrarResultado(
   "unidadesVendidas / unidadesVendidasM",

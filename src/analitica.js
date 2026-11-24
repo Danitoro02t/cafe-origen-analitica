@@ -2,10 +2,13 @@ function valorVenta(venta) {
   return venta.cantidad * venta.precio;
 }
 
-function totalVendido(ventas) {
+function totalVendido(ventas, contador) {
   let total = 0;
 
   for (const venta of ventas) {
+    if (contador) {
+      contador.operaciones += 1;
+    }
     total += valorVenta(venta);
   }
 
@@ -30,7 +33,7 @@ function unidadesVendidasM(ventas) {
   return ventas.reduce((unidades, venta) => unidades + venta.cantidad, 0);
 }
 
-function ventaMayor(ventas) {
+function ventaMayor(ventas, contador) {
   if (ventas.length === 0) {
     return null;
   }
@@ -38,6 +41,9 @@ function ventaMayor(ventas) {
   let mayor = ventas[0];
 
   for (const venta of ventas) {
+    if (contador) {
+      contador.operaciones += 2;
+    }
     if (valorVenta(venta) > valorVenta(mayor)) {
       mayor = venta;
     }
@@ -88,24 +94,37 @@ function ventasPorCiudadM(ventas, ciudad) {
     .reduce((total, valor) => total + valor, 0);
 }
 
-function totalPorCiudad(ventas) {
-  const acumulado = ventas.reduce((resultado, venta) => {
-    const ciudad = venta.ciudad.trim();
-    const clave = ciudad.toLowerCase();
+function totalPorCiudad(ventas, contador) {
+  const totales = {};
+  const nombres = {};
 
-    if (!Object.hasOwn(resultado.totales, clave)) {
-      resultado.totales[clave] = 0;
-      resultado.nombres[clave] = ciudad;
+  for (const venta of ventas) {
+    if (contador) {
+      contador.operaciones += 1;
     }
 
-    resultado.totales[clave] += valorVenta(venta);
-    return resultado;
-  }, { totales: {}, nombres: {} });
+    const ciudad = venta.ciudad.trim();
+    const clave = ciudad.toLowerCase();
+    if (contador) {
+      contador.operaciones += 1;
+    }
+    if (!Object.hasOwn(totales, clave)) {
+      totales[clave] = 0;
+      nombres[clave] = ciudad;
+    }
 
-  return Object.entries(acumulado.totales).reduce((resultado, [clave, total]) => {
-    resultado[acumulado.nombres[clave]] = total;
-    return resultado;
-  }, {});
+    totales[clave] += valorVenta(venta);
+  }
+
+  const resultado = {};
+  for (const [clave, total] of Object.entries(totales)) {
+    if (contador) {
+      contador.operaciones += 1;
+    }
+    resultado[nombres[clave]] = total;
+  }
+
+  return resultado;
 }
 
 function unidadesPorProducto(ventas) {

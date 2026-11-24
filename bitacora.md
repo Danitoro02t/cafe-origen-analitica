@@ -234,3 +234,27 @@ Resultado manual: el ticket promedio es aproximadamente `89.545,45`.
 - **Prueba realizada:** la prueba de regresión verifica para ese día un arreglo vacío, total `0`, unidades `0`, ticket promedio `0` y que el valor no sea `NaN`.
 - **Causa:** dividir entre cero produce `NaN` cuando tanto el numerador como el denominador son cero.
 - **Corrección:** `ticketPromedio` devuelve `0` cuando no encuentra ventas válidas; el reporte también muestra el mensaje “Sin ventas registradas para esta fecha.” No se divide entre cero.
+
+## Predicción previa: crecimiento de operaciones
+
+Antes de ejecutar `node src/medir.js`, predigo que al multiplicar `n` por 10:
+
+- `totalVendido` hará 10 veces más operaciones: recorre cada venta una sola vez, así que espero crecimiento lineal, O(n).
+- `ventaMayor` hará 10 veces más operaciones: recorre las ventas y compara cada una contra el máximo actual, así que espero crecimiento lineal, O(n).
+- `totalPorCiudad` hará aproximadamente 10 veces más operaciones: recorre las ventas, verifica si ya existe la ciudad y al final recorre las ciudades agrupadas; espero crecimiento lineal, O(n), porque el número de ciudades está acotado.
+- `primeraVenta` conservará el mismo número de operaciones: solo accede a la primera posición, así que espero crecimiento constante, O(1).
+
+El contador se pasa como objeto `{ operaciones: 0 }` y las funciones incrementan su propiedad por referencia. Una operación contada representa una visita a un elemento o una comparación explícita del algoritmo: `totalVendido` suma una por venta; `ventaMayor`, una visita y una comparación por venta; `totalPorCiudad`, una visita y una comprobación de existencia por venta, más una visita por ciudad agregada; `primeraVenta`, una lectura cuando el arreglo no está vacío.
+
+### Resultados medidos
+
+Se generaron datos independientes para cada tamaño con las listas fijas de productos, precios, ciudades y fechas en `src/generador.js`. Una ejecución de `node src/medir.js` produjo:
+
+| n | totalVendido | ventaMayor | totalPorCiudad | primeraVenta |
+|---:|---:|---:|---:|---:|
+| 100 | 100 | 200 | 204 | 1 |
+| 1.000 | 1.000 | 2.000 | 2.004 | 1 |
+| 10.000 | 10.000 | 20.000 | 20.004 | 1 |
+| 100.000 | 100.000 | 200.000 | 200.004 | 1 |
+
+La predicción coincide con los resultados: `totalVendido` y `ventaMayor` crecen exactamente 10 veces por cada salto de tamaño; `totalPorCiudad` pasa de 204 a 2.004, de 2.004 a 20.004 y de 20.004 a 200.004, cerca de 10 veces debido a las cuatro visitas finales por ciudad; `primeraVenta` permanece en 1. En otras ejecuciones, la selección aleatoria podría no incluir alguna ciudad en los 100 registros y reducir el conteo final hasta en cuatro operaciones; el término dominante sigue siendo 2n. Por tanto, las tres funciones de recorrido y agrupación son O(n), y `primeraVenta` es O(1). El conteo de `totalPorCiudad` no es O(n²): no compara cada venta con todas las demás, sino que consulta las claves de un objeto al recorrer cada venta.

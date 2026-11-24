@@ -32,6 +32,14 @@ node src/explorar.js
 
 El script muestra el número de registros, el primero y el último, el producto del registro en la posición 4 y la tabla completa. La estructura de los datos, los casos borde y la bitácora de depuración están en [bitacora.md](./bitacora.md).
 
+## Medir operaciones
+
+```sh
+node src/medir.js
+```
+
+El script genera historiales de 100, 1.000, 10.000 y 100.000 ventas y muestra en una tabla las operaciones contadas para cada función. Las predicciones, los resultados y su análisis Big O están en [bitacora.md](./bitacora.md).
+
 ## Preguntas que responde
 
 - ¿Cuánto se vendió en total y cuál fue el ticket promedio?
