@@ -207,3 +207,30 @@ Resultado manual: el ticket promedio es aproximadamente `89.545,45`.
 - ¿Qué transformo?: los totales del diccionario en entradas producto-valor y luego en objetos con producto y valor generado.
 - ¿Qué acumulo?: el dinero generado por las ventas de cada producto.
 - ¿Cómo agrupo?: en un objeto diccionario por producto; sus entradas se ordenan de mayor a menor antes de tomar `k`, sin ordenar el arreglo original.
+
+### ventasDelDia
+
+- ¿Qué recorro?: cada venta con `filter`.
+- ¿Qué filtro?: registros cuya fecha coincide exactamente con la fecha solicitada.
+- ¿Qué acumulo?: nada; devuelve un arreglo nuevo con las ventas coincidentes.
+- Fecha sin ventas: devuelve `[]`; los indicadores sobre ese arreglo devuelven cero.
+
+## Registro de depuración
+
+### Error 1: Bogotá aparece como dos ciudades
+
+- **Síntoma:** Bogotá aparece más de una vez en el resumen por ciudad.
+- **Entrada que lo produce:** registros con `ciudad: "Bogotá"`, `ciudad: "BOGOTÁ "` y `ciudad: "bogotá"`.
+- **Hipótesis:** agrupar por el texto original sin normalizar crea una clave distinta por mayúsculas o espacios.
+- **Prueba realizada:** se agregaron esos tres registros a la prueba de `totalPorCiudad`; el resultado esperado es una sola clave, `Bogotá`, con valor `400`.
+- **Causa:** considerar el nombre original como clave de agrupación no reconoce variantes equivalentes.
+- **Corrección:** `totalPorCiudad` agrupa usando `trim().toLowerCase()` como clave normalizada y conserva un solo nombre de presentación. La prueba de regresión pasa y el total aparece en un solo grupo.
+
+### Error 2: ticket promedio `NaN` en un día sin ventas
+
+- **Síntoma:** el ticket promedio se muestra como `NaN` al filtrar una fecha sin ventas.
+- **Entrada que lo produce:** `ventasDelDia(ventas, "2026-09-07")`, que devuelve un arreglo vacío.
+- **Hipótesis:** se calcula `total / cantidadDeVentas` con denominador cero.
+- **Prueba realizada:** la prueba de regresión verifica para ese día un arreglo vacío, total `0`, unidades `0`, ticket promedio `0` y que el valor no sea `NaN`.
+- **Causa:** dividir entre cero produce `NaN` cuando tanto el numerador como el denominador son cero.
+- **Corrección:** `ticketPromedio` devuelve `0` cuando no encuentra ventas válidas; el reporte también muestra el mensaje “Sin ventas registradas para esta fecha.” No se divide entre cero.

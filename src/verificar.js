@@ -9,7 +9,9 @@ const {
   ventasPorCiudadM,
   totalPorCiudad,
   unidadesPorProducto,
-  topProductosPorValor
+  topProductosPorValor,
+  ticketPromedio,
+  ventasDelDia
 } = require("./analitica");
 
 const ventasOriginales = [...ventas];
@@ -53,6 +55,35 @@ mostrarResultado(
     ))),
     ciudadesEsperadas
   )
+);
+
+const ciudadesConVariantes = totalPorCiudad([
+  { ciudad: "Bogotá", cantidad: 1, precio: 100 },
+  { ciudad: "BOGOTÁ ", cantidad: 2, precio: 100 },
+  { ciudad: "bogotá", cantidad: 1, precio: 100 }
+]);
+mostrarResultado(
+  "regresión: variantes de Bogotá forman un solo grupo",
+  isDeepStrictEqual(ciudadesConVariantes, { Bogotá: 400 })
+);
+
+const ventasDelDiaConVentas = ventasDelDia(ventas, "2026-09-01");
+mostrarResultado(
+  "ventasDelDia: fecha con ventas",
+  ventasDelDiaConVentas.length === 2 &&
+    totalVendido(ventasDelDiaConVentas) === 110000 &&
+    unidadesVendidas(ventasDelDiaConVentas) === 3 &&
+    ticketPromedio(ventasDelDiaConVentas) === 55000
+);
+
+const ventasDelDiaVacio = ventasDelDia(ventas, "2026-09-07");
+mostrarResultado(
+  "regresión: día sin ventas retorna resumen cero sin NaN",
+  ventasDelDiaVacio.length === 0 &&
+    totalVendido(ventasDelDiaVacio) === 0 &&
+    unidadesVendidas(ventasDelDiaVacio) === 0 &&
+    ticketPromedio(ventasDelDiaVacio) === 0 &&
+    !Number.isNaN(ticketPromedio(ventasDelDiaVacio))
 );
 
 const unidadesEsperadas = {
